@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env/
+ENV/
+
+# Never commit real secrets
+backend/.env
+.env
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Data uploads (keep synthetic seed data, ignore local uploads)
+backend/data/uploads/
+*.db
+*.sqlite3
+
+# Node (teammate's frontend; we never touch frontend/ but keep sane defaults)
+node_modules/
+dist/
