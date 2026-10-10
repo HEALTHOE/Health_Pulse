@@ -1,26 +1,41 @@
 import { useEffect, useState } from "react";
-import { MapPin, Search, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 const Districts = () => {
+  const navigate = useNavigate();
+
   const [districts, setDistricts] = useState([]);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
+        setLoading(true);
+        setError("");
+
         const response = await api.get("/api/districts");
-        setDistricts(response.data);
+
+        const data = response.data;
+
+        // Support the backend returning either an array
+        // or an object containing the district list.
+        const districtList = Array.isArray(data)
+          ? data
+          : data?.data || data?.districts || [];
+
+        setDistricts(districtList);
       } catch (err) {
-        setError(
+        console.error("Failed to fetch districts:", err);
+
+        const message =
           err.response?.data?.error?.message ||
-            "Unable to load districts."
-        );
+          err.response?.data?.message ||
+          "Failed to load districts.";
+
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -29,11 +44,26 @@ const Districts = () => {
     fetchDistricts();
   }, []);
 
-  const filteredDistricts = districts.filter((district) =>
-    `${district.name} ${district.code}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+  const getDistrictId = (district) => {
+    return district.id ?? district.district_id;
+  };
+
+  const getDistrictName = (district) => {
+    return (
+      district.name ||
+      district.district_name ||
+      district.district ||
+      `District ${getDistrictId(district)}`
+    );
+  };
+
+  const handleViewDistrict = (district) => {
+    const districtId = getDistrictId(district);
+
+    if (districtId !== undefined && districtId !== null) {
+      navigate(`/districts/${districtId}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -43,11 +73,14 @@ const Districts = () => {
         </h1>
 
         <p className="mt-2 text-slate-500">
-          Explore district-level health performance.
+          District-level health performance and analysis.
         </p>
 
-        <div className="mt-8 bg-white rounded-xl border border-slate-200 p-8 text-center">
-          <p className="text-slate-500">Loading districts...</p>
+        <div className="mt-8 bg-white border border-slate-200 rounded-xl p-10 flex items-center justify-center">
+          <div className="flex items-center gap-3 text-slate-500">
+            <Loader2 size={20} className="animate-spin" />
+            Loading districts...
+          </div>
         </div>
       </div>
     );
@@ -60,8 +93,18 @@ const Districts = () => {
           Districts
         </h1>
 
-        <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-5">
-          <p className="text-red-700 font-medium">{error}</p>
+        <p className="mt-2 text-slate-500">
+          District-level health performance and analysis.
+        </p>
+
+        <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-5">
+          <p className="text-sm font-medium text-red-800">
+            Unable to load districts
+          </p>
+
+          <p className="mt-1 text-sm text-red-700">
+            {error}
+          </p>
         </div>
       </div>
     );
@@ -69,89 +112,84 @@ const Districts = () => {
 
   return (
     <div>
-      {/* Header */}
+      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          Districts
+          Health Districts
         </h1>
 
         <p className="mt-2 text-slate-500">
-          Explore district-level health performance.
-        </p>
-      </div>
-
-      {/* Search */}
-      <div className="mt-6 relative max-w-md">
-        <Search
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-
-        <input
-          type="text"
-          placeholder="Search districts..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      {/* District count */}
-      <div className="mt-6">
-        <p className="text-sm text-slate-500">
-          {filteredDistricts.length}{" "}
-          {filteredDistricts.length === 1
-            ? "district"
-            : "districts"}
+          Select a district to view detailed health performance.
         </p>
       </div>
 
       {/* District Cards */}
-      {filteredDistricts.length > 0 ? (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDistricts.map((district) => (
-            <div
-              key={district.id}
-              className="bg-white rounded-xl border border-slate-200 p-6 hover:border-blue-300 hover:shadow-sm transition"
-            >
-              <div className="flex items-start justify-between">
-                <div className="p-2.5 bg-blue-50 rounded-lg">
-                  <MapPin
-                    size={20}
-                    className="text-blue-600"
-                  />
-                </div>
+      {districts.length === 0 ? (
+        <div className="mt-8 bg-white border border-slate-200 rounded-xl p-10 text-center">
+          <MapPin
+            size={36}
+            className="mx-auto text-slate-400"
+          />
 
-                <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-semibold">
-                  {district.code}
-                </span>
-              </div>
+          <p className="mt-4 text-sm font-medium text-slate-700">
+            No districts available
+          </p>
 
-              <h2 className="mt-5 text-lg font-semibold text-slate-900">
-                {district.name}
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                District ID: {district.id}
-              </p>
-
-              <button
-                onClick={() =>
-                  navigate(`/districts/${district.id}`)
-                }
-                className="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                View Details
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          ))}
+          <p className="mt-1 text-sm text-slate-500">
+            No district records were returned by the backend.
+          </p>
         </div>
       ) : (
-        <div className="mt-4 bg-white rounded-xl border border-slate-200 p-10 text-center">
-          <p className="text-slate-500">
-            No districts found.
-          </p>
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {districts.map((district) => {
+            const districtId = getDistrictId(district);
+            const districtName = getDistrictName(district);
+
+            return (
+              <div
+                key={districtId}
+                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-sm transition"
+              >
+                {/* District Information */}
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                    <MapPin
+                      size={21}
+                      className="text-blue-600"
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900">
+                      {districtName}
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      District ID: {districtId}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="my-5 border-t border-slate-100" />
+
+                {/* Location */}
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <MapPin size={15} />
+                  <span>Health District</span>
+                </div>
+
+                {/* View Button */}
+                <button
+                  onClick={() => handleViewDistrict(district)}
+                  className="mt-5 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                >
+                  View District
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

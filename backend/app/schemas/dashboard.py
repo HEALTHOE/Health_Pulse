@@ -45,6 +45,7 @@ class DistrictDashboard(BaseModel):
     period: str
     health_score: float
     health_status: str
+    indicators: dict
     blocks: list[BlockRankingItem]  # sorted desc for ranking charts
 
 

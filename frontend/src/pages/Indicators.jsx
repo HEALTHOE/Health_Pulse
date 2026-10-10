@@ -1,58 +1,36 @@
 import { useEffect, useState } from "react";
 import {
-  Search,
+  Activity,
+  ArrowDown,
+  ArrowUp,
   Target,
   TrendingUp,
-  TrendingDown,
-  X,
-  Loader2,
+  AlertCircle,
+  Eye,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from "recharts";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 const Indicators = () => {
-  const [indicators, setIndicators] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
 
+  const [indicators, setIndicators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [selectedIndicator, setSelectedIndicator] = useState(null);
-  const [selectedDistrict, setSelectedDistrict] = useState("");
-  const [trendData, setTrendData] = useState([]);
-  const [trendLoading, setTrendLoading] = useState(false);
-  const [trendError, setTrendError] = useState("");
-
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchIndicators = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const [indicatorResponse, districtResponse] = await Promise.all([
-          api.get("/api/indicators"),
-          api.get("/api/districts"),
-        ]);
+        const response = await api.get("/api/indicators");
 
-        setIndicators(indicatorResponse.data);
-        setDistricts(districtResponse.data);
-
-        if (districtResponse.data.length > 0) {
-          setSelectedDistrict(String(districtResponse.data[0].id));
-        }
+        setIndicators(response.data);
       } catch (err) {
         setError(
-          err.response?.data?.error?.message ||
+          err?.response?.data?.error?.message ||
+            err?.response?.data?.message ||
             "Failed to load indicators."
         );
       } finally {
@@ -60,449 +38,334 @@ const Indicators = () => {
       }
     };
 
-    fetchData();
+    fetchIndicators();
   }, []);
 
-  useEffect(() => {
-    if (!selectedIndicator || !selectedDistrict) {
-      return;
+  const getDirectionIcon = (direction) => {
+    if (direction === "LOWER_IS_BETTER") {
+      return <ArrowDown size={15} />;
     }
 
-    const fetchTrend = async () => {
-      try {
-        setTrendLoading(true);
-        setTrendError("");
+    return <ArrowUp size={15} />;
+  };
 
-        const response = await api.get(
-          `/api/indicators/${selectedIndicator.id}/trend`,
-          {
-            params: {
-              level: "DISTRICT",
-              district_id: selectedDistrict,
-            },
-          }
-        );
+  const getDirectionLabel = (direction) => {
+    if (direction === "LOWER_IS_BETTER") {
+      return "Lower is better";
+    }
 
-        setTrendData(response.data.data || []);
-      } catch (err) {
-        setTrendData([]);
-        setTrendError(
-          err.response?.data?.error?.message ||
-            "Unable to load indicator trend."
-        );
-      } finally {
-        setTrendLoading(false);
-      }
-    };
-
-    fetchTrend();
-  }, [selectedIndicator, selectedDistrict]);
-
-  const filteredIndicators = indicators.filter((indicator) => {
-    const query = search.toLowerCase();
-
-    return (
-      indicator.name.toLowerCase().includes(query) ||
-      indicator.code.toLowerCase().includes(query) ||
-      indicator.description.toLowerCase().includes(query)
-    );
-  });
+    return "Higher is better";
+  };
 
   const formatValue = (value, unit) => {
     if (unit === "%") {
       return `${value}%`;
     }
 
-    return `${value} ${unit}`;
+    return value;
   };
 
-  const openTrend = (indicator) => {
-    setSelectedIndicator(indicator);
-    setTrendData([]);
-    setTrendError("");
-  };
-
-  const closeTrend = () => {
-    setSelectedIndicator(null);
-    setTrendData([]);
-    setTrendError("");
-  };
-
-  const selectedDistrictName =
-    districts.find(
-      (district) => String(district.id) === String(selectedDistrict)
-    )?.name || "";
-
-  return (
-    <div>
-      {/* Header */}
+  if (loading) {
+    return (
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          Health Indicators
+          Indicators
         </h1>
 
         <p className="mt-2 text-slate-500">
-          Monitor key health indicators, targets, and performance thresholds.
+          Monitor key health indicators and their performance.
+        </p>
+
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <div
+              key={item}
+              className="bg-white border border-slate-200 rounded-xl p-6 animate-pulse"
+            >
+              <div className="h-5 w-40 bg-slate-200 rounded" />
+
+              <div className="mt-4 h-4 w-full bg-slate-200 rounded" />
+
+              <div className="mt-2 h-4 w-3/4 bg-slate-200 rounded" />
+
+              <div className="mt-6 h-10 w-24 bg-slate-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Indicators
+        </h1>
+
+        <p className="mt-2 text-slate-500">
+          Monitor key health indicators and their performance.
+        </p>
+
+        <div className="mt-8 bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3">
+          <AlertCircle
+            size={20}
+            className="text-red-500 shrink-0 mt-0.5"
+          />
+
+          <div>
+            <p className="font-medium text-red-800">
+              Unable to load indicators
+            </p>
+
+            <p className="mt-1 text-sm text-red-700">
+              {error}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const higherIsBetterCount = indicators.filter(
+    (indicator) => indicator.direction === "HIGHER_IS_BETTER"
+  ).length;
+
+  const lowerIsBetterCount = indicators.filter(
+    (indicator) => indicator.direction === "LOWER_IS_BETTER"
+  ).length;
+
+  return (
+    <div>
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Indicators
+        </h1>
+
+        <p className="mt-2 text-slate-500">
+          Monitor key health indicators and their performance.
         </p>
       </div>
 
-      {/* Search */}
-      <div className="mt-6 max-w-lg relative">
-        <Search
-          size={20}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-        />
+      {/* Summary */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Total */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">
+                Total Indicators
+              </p>
 
-        <input
-          type="text"
-          placeholder="Search indicators..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-white border border-slate-200 rounded-lg
-                     pl-11 pr-4 py-3 text-sm outline-none
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {indicators.length}
+              </p>
+            </div>
+
+            <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Activity
+                size={21}
+                className="text-blue-600"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Higher is better */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">
+                Higher is Better
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {higherIsBetterCount}
+              </p>
+            </div>
+
+            <div className="w-11 h-11 rounded-lg bg-green-50 flex items-center justify-center">
+              <TrendingUp
+                size={21}
+                className="text-green-600"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Lower is better */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">
+                Lower is Better
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {lowerIsBetterCount}
+              </p>
+            </div>
+
+            <div className="w-11 h-11 rounded-lg bg-amber-50 flex items-center justify-center">
+              <ArrowDown
+                size={21}
+                className="text-amber-600"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="mt-8 bg-white border border-slate-200 rounded-xl p-8 text-center">
-          <p className="text-slate-500">Loading indicators...</p>
+      {/* Indicator List */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Health Indicators
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Definitions, targets and performance thresholds.
+            </p>
+          </div>
+
+          <span className="text-sm text-slate-500">
+            {indicators.length} indicators
+          </span>
         </div>
-      )}
 
-      {/* Error */}
-      {!loading && error && (
-        <div className="mt-8 bg-red-50 border border-red-200 rounded-xl p-6">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
+        {indicators.length === 0 ? (
+          <div className="mt-5 bg-white border border-slate-200 rounded-xl p-10 text-center">
+            <Activity
+              size={32}
+              className="mx-auto text-slate-400"
+            />
 
-      {/* Indicator count */}
-      {!loading && !error && (
-        <p className="mt-6 text-sm text-slate-500">
-          {filteredIndicators.length}{" "}
-          {filteredIndicators.length === 1 ? "indicator" : "indicators"}
-        </p>
-      )}
+            <p className="mt-3 font-medium text-slate-700">
+              No indicators available
+            </p>
 
-      {/* Cards */}
-      {!loading && !error && (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredIndicators.map((indicator) => {
-            const isHigherBetter =
-              indicator.direction === "HIGHER_IS_BETTER";
-
-            return (
+            <p className="mt-1 text-sm text-slate-500">
+              There are currently no indicators configured in the system.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {indicators.map((indicator) => (
               <div
                 key={indicator.id}
-                className="bg-white border border-slate-200 rounded-xl p-6
-                           hover:border-blue-300 hover:shadow-sm transition"
+                className="bg-white border border-slate-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-sm transition"
               >
-                {/* Top */}
+                {/* Indicator Header */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                      {isHigherBetter ? (
-                        <TrendingUp size={20} className="text-blue-600" />
-                      ) : (
-                        <TrendingDown size={20} className="text-blue-600" />
-                      )}
+                    <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                      <Activity
+                        size={20}
+                        className="text-blue-600"
+                      />
                     </div>
 
                     <div>
-                      <h2 className="font-semibold text-slate-900">
+                      <h3 className="font-semibold text-slate-900">
                         {indicator.name}
-                      </h2>
+                      </h3>
 
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="mt-1 text-xs font-medium text-slate-400">
                         {indicator.code}
                       </p>
                     </div>
                   </div>
 
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                  <span className="px-2.5 py-1 rounded-full bg-slate-100 text-xs font-medium text-slate-600">
                     {indicator.unit}
                   </span>
                 </div>
 
                 {/* Description */}
-                <p className="mt-5 text-sm text-slate-500 leading-6">
+                <p className="mt-5 text-sm leading-6 text-slate-500">
                   {indicator.description}
                 </p>
 
-                {/* Target + Direction */}
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <Target size={15} />
-                      Target
+                {/* Metrics */}
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  {/* Target */}
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <Target size={16} />
+
+                      <span className="text-xs">
+                        Target
+                      </span>
                     </div>
 
-                    <p className="mt-2 text-lg font-semibold text-slate-900">
-                      {formatValue(indicator.target, indicator.unit)}
+                    <p className="mt-2 text-xl font-bold text-slate-900">
+                      {formatValue(
+                        indicator.target,
+                        indicator.unit
+                      )}
                     </p>
                   </div>
 
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <p className="text-xs text-slate-500">
-                      Direction
-                    </p>
+                  {/* Direction */}
+                  <div className="rounded-lg bg-slate-50 p-4">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      {getDirectionIcon(indicator.direction)}
 
-                    <p className="mt-2 text-sm font-semibold text-slate-900">
-                      {isHigherBetter
-                        ? "Higher is better"
-                        : "Lower is better"}
+                      <span className="text-xs">
+                        Performance
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm font-semibold text-slate-800">
+                      {getDirectionLabel(indicator.direction)}
                     </p>
                   </div>
                 </div>
 
                 {/* Thresholds */}
                 <div className="mt-5 pt-5 border-t border-slate-100">
-                  <p className="text-xs font-medium text-slate-500 mb-3">
+                  <p className="text-xs font-medium text-slate-500">
                     Performance thresholds
                   </p>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <div>
-                      <span className="text-slate-400">Warning: </span>
-                      <span className="font-medium text-amber-600">
-                        {formatValue(
-                          indicator.warning_threshold,
-                          indicator.unit
-                        )}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400">Critical: </span>
-                      <span className="font-medium text-red-600">
-                        {formatValue(
-                          indicator.critical_threshold,
-                          indicator.unit
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Formula */}
-                <div className="mt-4">
-                  <p className="text-xs text-slate-400">
-                    Formula
-                  </p>
-
-                  <code className="block mt-1 text-xs bg-slate-50 rounded-md px-3 py-2 text-slate-600 break-words">
-                    {indicator.formula}
-                  </code>
-                </div>
-
-                {/* Trend button */}
-                <button
-                  onClick={() => openTrend(indicator)}
-                  className="mt-5 w-full flex items-center justify-center gap-2
-                             px-4 py-2.5 rounded-lg bg-blue-50 text-blue-600
-                             text-sm font-medium hover:bg-blue-100 transition"
-                >
-                  View Trend
-                  <TrendingUp size={16} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Empty */}
-      {!loading && !error && filteredIndicators.length === 0 && (
-        <div className="mt-8 bg-white border border-slate-200 rounded-xl p-10 text-center">
-          <p className="text-slate-500">
-            No indicators found matching "{search}".
-          </p>
-        </div>
-      )}
-
-      {/* Trend Modal */}
-      {selectedIndicator && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-xl">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between p-6 border-b border-slate-200">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">
-                  {selectedIndicator.name} Trend
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  District-level monthly performance
-                  {selectedDistrictName
-                    ? ` for ${selectedDistrictName}.`
-                    : "."}
-                </p>
-              </div>
-
-              <button
-                onClick={closeTrend}
-                className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* District selector */}
-            <div className="px-6 pt-5">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                District
-              </label>
-
-              <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="w-full md:w-72 border border-slate-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {districts.map((district) => (
-                  <option key={district.id} value={district.id}>
-                    {district.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Chart */}
-            <div className="p-6">
-              {trendLoading && (
-                <div className="h-80 flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Loader2 size={18} className="animate-spin" />
-                    Loading trend...
-                  </div>
-                </div>
-              )}
-
-              {!trendLoading && trendError && (
-                <div className="h-80 flex items-center justify-center">
-                  <p className="text-red-600 text-sm">
-                    {trendError}
-                  </p>
-                </div>
-              )}
-
-              {!trendLoading &&
-                !trendError &&
-                trendData.length > 0 && (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={trendData}
-                        margin={{
-                          top: 10,
-                          right: 20,
-                          left: 10,
-                          bottom: 10,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-
-                        <XAxis
-                          dataKey="month"
-                          tick={{ fontSize: 12 }}
-                        />
-
-                        <YAxis
-                          domain={["auto", "auto"]}
-                          tick={{ fontSize: 12 }}
-                        />
-
-                        <Tooltip
-                          formatter={(value) => [
-                            `${Number(value).toFixed(2)} ${
-                              selectedIndicator.unit
-                            }`,
-                            selectedIndicator.name,
-                          ]}
-                        />
-
-                        <ReferenceLine
-                          y={selectedIndicator.target}
-                          stroke="#64748b"
-                          strokeDasharray="6 4"
-                          label={{
-                            value: `Target: ${selectedIndicator.target}`,
-                            position: "insideTopRight",
-                            fontSize: 12,
-                          }}
-                        />
-
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#2563eb"
-                          strokeWidth={2.5}
-                          dot={{
-                            r: 3,
-                          }}
-                          activeDot={{
-                            r: 5,
-                          }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-              {!trendLoading &&
-                !trendError &&
-                trendData.length === 0 && (
-                  <div className="h-80 flex items-center justify-center">
-                    <p className="text-slate-500 text-sm">
-                      No trend data available.
-                    </p>
-                  </div>
-                )}
-            </div>
-
-            {/* Footer information */}
-            <div className="px-6 pb-6">
-              <div className="bg-slate-50 rounded-lg p-4">
-                <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
-                  <div>
-                    <span className="text-slate-500">
-                      Target:{" "}
-                    </span>
-                    <span className="font-semibold text-slate-900">
+                  <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                    <span className="px-3 py-1.5 rounded-full bg-yellow-50 text-yellow-700">
+                      Warning:{" "}
                       {formatValue(
-                        selectedIndicator.target,
-                        selectedIndicator.unit
+                        indicator.warning_threshold,
+                        indicator.unit
+                      )}
+                    </span>
+
+                    <span className="px-3 py-1.5 rounded-full bg-red-50 text-red-700">
+                      Critical:{" "}
+                      {formatValue(
+                        indicator.critical_threshold,
+                        indicator.unit
                       )}
                     </span>
                   </div>
+                </div>
 
-                  <div>
-                    <span className="text-slate-500">
-                      Direction:{" "}
-                    </span>
-                    <span className="font-semibold text-slate-900">
-                      {selectedIndicator.direction ===
-                      "HIGHER_IS_BETTER"
-                        ? "Higher is better"
-                        : "Lower is better"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-slate-500">
-                      Data points:{" "}
-                    </span>
-                    <span className="font-semibold text-slate-900">
-                      {trendData.length}
-                    </span>
-                  </div>
+                {/* View Details */}
+                <div className="mt-6 pt-5 border-t border-slate-100">
+                  <button
+                    onClick={() =>
+                      navigate(`/indicators/${indicator.id}`)
+                    }
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                  >
+                    <Eye size={16} />
+                    View Details
+                  </button>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

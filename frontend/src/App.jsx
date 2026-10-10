@@ -12,6 +12,7 @@ import Blocks from "./pages/Blocks";
 import BlockDetail from "./pages/BlockDetail";
 import FacilityDetail from "./pages/FacilityDetail";
 import Indicators from "./pages/Indicators";
+import IndicatorDetail from "./pages/IndicatorDetail";
 import Alerts from "./pages/Alerts";
 import DataUpload from "./pages/DataUpload";
 import DataQuality from "./pages/DataQuality";
@@ -33,26 +34,34 @@ function App() {
         >
           <Route path="/dashboard" element={<Dashboard />} />
 
+          {/* District routes */}
           <Route path="/districts" element={<Districts />} />
-
           <Route
             path="/districts/:districtId"
             element={<DistrictDetail />}
           />
 
+          {/* Block routes */}
           <Route path="/blocks" element={<Blocks />} />
-
           <Route
             path="/blocks/:blockId"
             element={<BlockDetail />}
           />
 
+          {/* Facility route */}
           <Route
             path="/facilities/:facilityId"
             element={<FacilityDetail />}
           />
 
+          {/* Indicator routes */}
           <Route path="/indicators" element={<Indicators />} />
+          <Route
+            path="/indicators/:indicatorId"
+            element={<IndicatorDetail />}
+          />
+
+          {/* Other application routes */}
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/data-upload" element={<DataUpload />} />
           <Route path="/data-quality" element={<DataQuality />} />
