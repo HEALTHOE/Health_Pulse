@@ -184,10 +184,14 @@ def main() -> None:
         admin = seed_admin(db)
         stats = seed_dataset(db)
         n_values = recompute_indicator_values(db)
+        from app.services.alert_service import evaluate_alerts
+
+        alerts = evaluate_alerts(db)
         print(f"indicators added: {new_indicators}")
         print(f"admin: {admin.email}")
         print(f"health_records inserted={stats['inserted']} updated={stats['updated']}")
         print(f"indicator_values recomputed: {n_values}")
+        print(f"alerts created={alerts['created']} resolved={alerts['resolved']}")
     finally:
         db.close()
 

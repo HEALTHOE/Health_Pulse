@@ -16,8 +16,9 @@ from app.auth.jwt import create_access_token, decode_token
 from app.auth.security import hash_password, verify_password
 from app.database import get_db
 from app.models.enums import UserRole
-from app.models.location import Block
 from app.models.user import User
+from app.services.audit import log_action
+from app.services.users import validate_user_scope
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
@@ -31,32 +32,10 @@ _optional_bearer = HTTPBearer(auto_error=False)
 
 def _validate_scope(db: Session, payload: RegisterRequest) -> None:
     """Enforce role->scope rules; raise 400 on inconsistent scope."""
-    if payload.role == UserRole.ADMIN:
-        if payload.district_id is not None or payload.block_id is not None:
-            raise HTTPException(
-                status_code=400, detail="ADMIN must not have district/block scope"
-            )
-    elif payload.role == UserRole.DISTRICT_HEALTH_OFFICER:
-        if payload.district_id is None:
-            raise HTTPException(
-                status_code=400, detail="District officer requires district_id"
-            )
-        if payload.block_id is not None:
-            raise HTTPException(
-                status_code=400, detail="District officer must not have block_id"
-            )
-    else:  # BLOCK_OFFICER
-        if payload.block_id is None:
-            raise HTTPException(
-                status_code=400, detail="Block officer requires block_id"
-            )
-        block = db.query(Block).filter(Block.id == payload.block_id).first()
-        if not block:
-            raise HTTPException(status_code=400, detail="Unknown block_id")
-        if payload.district_id is not None and payload.district_id != block.district_id:
-            raise HTTPException(
-                status_code=400, detail="district_id does not match block's district"
-            )
+    error = validate_user_scope(
+        db, payload.role, payload.district_id, payload.block_id)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
 
 def _optional_admin(
@@ -102,6 +81,8 @@ def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+    log_action(db, admin.id if admin else user.id, "USER_CREATE",
+               f"user:{user.email}", f"role={user.role.value}")
     return user
 
 
@@ -112,6 +93,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=401, detail="User is deactivated")
+    log_action(db, user.id, "LOGIN", f"user:{user.email}")
     return TokenResponse(
         access_token=create_access_token(user.id, user.role.value)
     )

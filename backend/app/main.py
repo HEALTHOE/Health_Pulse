@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.database import get_db
-from app.routers import auth, dashboard, indicators, locations
+from app.routers import admin, alerts, auth, dashboard, data, indicators, locations
 
 app = FastAPI(
     title="HealthPulse API",
@@ -104,3 +104,6 @@ app.include_router(auth.router)
 app.include_router(locations.router)
 app.include_router(indicators.router)
 app.include_router(dashboard.router)
+app.include_router(alerts.router)
+app.include_router(data.router)
+app.include_router(admin.router)
