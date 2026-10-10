@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.database import get_db
+from app.routers import auth, dashboard, indicators, locations
 
 app = FastAPI(
     title="HealthPulse API",
@@ -97,3 +98,9 @@ def health_check(db: Session = Depends(get_db)) -> dict:
             status_code=503, detail=f"Database unavailable: {exc}"
         ) from exc
     return {"status": "ok", "database": "connected"}
+
+
+app.include_router(auth.router)
+app.include_router(locations.router)
+app.include_router(indicators.router)
+app.include_router(dashboard.router)

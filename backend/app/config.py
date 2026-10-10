@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # NEVER use allow_origins=["*"] in code; origins always come from here.
     CORS_ORIGINS: str = "http://localhost:5173"
 
-    ADMIN_EMAIL: str = "admin@healthpulse.local"
+    ADMIN_EMAIL: str = "admin@example.com"
     ADMIN_PASSWORD: str = "Admin123!"
 
     @property

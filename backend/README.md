@@ -45,5 +45,5 @@ touch the dev PostgreSQL database.
 | ACCESS_TOKEN_EXPIRE_MINUTES | 60 | Token lifetime |
 | CORS_ORIGINS | http://localhost:5173 | Allowed frontend origins |
 | APP_ENV | dev | dev / test / prod |
-| ADMIN_EMAIL / ADMIN_PASSWORD | admin@healthpulse.local | Seed admin (env only) |
+| ADMIN_EMAIL / ADMIN_PASSWORD | admin@example.com | Seed admin (env only) |
 ```
