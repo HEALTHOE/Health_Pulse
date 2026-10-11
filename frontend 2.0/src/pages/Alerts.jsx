@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Bell,
+  Check,
+  CheckCheck,
   Clock,
   MapPin,
   OctagonAlert,
 } from "lucide-react";
 import api from "../services/api";
 import {
+  Button,
   Card,
   EmptyState,
   ErrorState,
@@ -29,6 +32,8 @@ const Alerts = () => {
   const [search, setSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ACTIVE");
+  const [updatingId, setUpdatingId] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -55,6 +60,28 @@ const Alerts = () => {
 
     fetchAlerts();
   }, []);
+
+  const handleStatusChange = async (alert, nextStatus) => {
+    setUpdatingId(alert.id);
+    setActionError("");
+
+    try {
+      const response = await api.patch(`/api/alerts/${alert.id}`, {
+        status: nextStatus,
+      });
+
+      setAlerts((prev) =>
+        prev.map((item) => (item.id === alert.id ? response.data : item))
+      );
+    } catch (err) {
+      setActionError(
+        err.response?.data?.error?.message ||
+          `Could not update alert #${alert.id}.`
+      );
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
@@ -194,6 +221,15 @@ const Alerts = () => {
 
         {!loading && !error && filteredAlerts.length > 0 && (
           <>
+            {actionError && (
+              <p
+                role="alert"
+                className="mb-3 rounded-lg border border-crit-100 bg-crit-50 p-3 text-sm text-crit-700"
+              >
+                {actionError}
+              </p>
+            )}
+
             <p className="mb-3 text-sm text-ink-3" aria-live="polite">
               Showing{" "}
               <span className="num font-medium text-ink-2">
@@ -240,6 +276,38 @@ const Alerts = () => {
                               >
                                 {formatStatus(alert.status)}
                               </StatusBadge>
+
+                              {alert.status !== "RESOLVED" && (
+                                <span className="ml-auto flex shrink-0 items-center gap-2">
+                                  {alert.status === "ACTIVE" && (
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      disabled={updatingId === alert.id}
+                                      onClick={() =>
+                                        handleStatusChange(alert, "ACKNOWLEDGED")
+                                      }
+                                    >
+                                      <Check size={15} aria-hidden="true" />
+                                      {updatingId === alert.id
+                                        ? "Working..."
+                                        : "Acknowledge"}
+                                    </Button>
+                                  )}
+
+                                  <Button
+                                    size="sm"
+                                    variant="primary"
+                                    disabled={updatingId === alert.id}
+                                    onClick={() =>
+                                      handleStatusChange(alert, "RESOLVED")
+                                    }
+                                  >
+                                    <CheckCheck size={15} aria-hidden="true" />
+                                    Resolve
+                                  </Button>
+                                </span>
+                              )}
                             </div>
 
                             <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
@@ -258,15 +326,15 @@ const Alerts = () => {
                                 isCritical ? "text-crit-700" : "text-ink"
                               }`}
                             >
-                              {alert.current_value}%
+                              {alert.current_value}
                             </dd>
                           </div>
 
                           <div>
-                            <dt className="text-xs text-ink-3">Target</dt>
+                            <dt className="text-xs text-ink-3">Threshold</dt>
 
                             <dd className="num mt-1 text-lg font-semibold text-ink">
-                              {alert.threshold}%
+                              {alert.threshold}
                             </dd>
                           </div>
 

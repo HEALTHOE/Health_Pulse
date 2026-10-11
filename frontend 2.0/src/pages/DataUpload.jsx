@@ -15,6 +15,11 @@ import {
   IconTile,
   PageHeader,
   SectionHeader,
+  Table,
+  TableShell,
+  Td,
+  Th,
+  Tr,
 } from "../components/ui";
 
 const ResultMetric = ({ label, value, valueClassName = "text-ink" }) => (
@@ -293,6 +298,52 @@ const DataUpload = () => {
                   value={result.alerts?.resolved ?? 0}
                 />
               </dl>
+
+              {/* Row-level validation errors */}
+              {Array.isArray(result.errors) && result.errors.length > 0 && (
+                <div className="mt-5 border-t border-ok-100 pt-4">
+                  <h3 className="text-sm font-semibold text-ink">
+                    Row-level validation errors ({result.errors.length})
+                  </h3>
+
+                  <p className="mt-1 text-xs text-ink-3">
+                    Fix these rows in your file and upload again. Valid rows
+                    were already saved.
+                  </p>
+
+                  <TableShell className="mt-3">
+                    <Table>
+                      <thead>
+                        <Tr>
+                          <Th align="right">Row</Th>
+                          <Th>Column</Th>
+                          <Th>Issue</Th>
+                        </Tr>
+                      </thead>
+
+                      <tbody>
+                        {result.errors.slice(0, 50).map((item, index) => (
+                          <Tr key={`${item.row}-${item.column}-${index}`}>
+                            <Td align="right" className="num">
+                              {item.row}
+                            </Td>
+
+                            <Td>{item.column}</Td>
+
+                            <Td>{item.message}</Td>
+                          </Tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </TableShell>
+
+                  {result.errors.length > 50 && (
+                    <p className="mt-2 text-xs text-ink-3">
+                      Showing 50 of {result.errors.length} errors.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
